@@ -128,7 +128,7 @@ def initialize_session_state() -> None:
         user_ip = st.context.ip_address
         st.session_state["user_ip"] = (
             user_ip
-            if user_ip != "127.0.0.1"
+            if user_ip
             else f"localhost_{st.session_state['session_id']}"
         )
         st.session_state["page_change"] = False

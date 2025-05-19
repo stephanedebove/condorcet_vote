@@ -9,7 +9,7 @@ license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12,<4.0.0"
 dependencies = [
-    "streamlit (>=1.44.1,<2.0.0)",
+    "streamlit (>=1.45.0,<2.0.0)",
     "st-gsheets-connection (>=0.1.0,<0.2.0)",
     "pandas (>=2.2.3,<3.0.0)",
 ]
