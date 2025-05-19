@@ -105,27 +105,6 @@ def scroll_to(element_id: str) -> None:
     )
 
 
-def get_remote_ip() -> str:
-    """
-    Retrieve the remote IP address of the client.
-
-    Returns:
-        str: The remote IP address if available, otherwise None.
-    """
-    try:
-        ctx = get_script_run_ctx()
-        if ctx is None:
-            return None
-
-        session_info = runtime.get_instance().get_client(ctx.session_id)
-        if session_info is None:
-            return None
-    except Exception as e:
-        st.error("An error occurred while retrieving the remote IP.")
-        st.error(f"Error details: {e}")
-        return None
-
-    return session_info.request.remote_ip
 
 
 # DATA LOADING and INITIALIZATION FUNCTIONS
@@ -146,10 +125,10 @@ def initialize_session_state() -> None:
         )
         st.session_state["start_time"] = datetime.now()
         st.session_state["session_id"] = str(uuid.uuid4())
-        user_ip = get_remote_ip()
+        user_ip = st.context.ip_address
         st.session_state["user_ip"] = (
             user_ip
-            if user_ip != "::1"
+            if user_ip != "127.0.0.1"
             else f"localhost_{st.session_state['session_id']}"
         )
         st.session_state["page_change"] = False
