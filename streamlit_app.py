@@ -13,12 +13,12 @@ CANDIDATES_FILE = "candidates.txt"
 WORKSHEET_NAME = "Sheet1"
 SUCCESS_PAGE = "pages/success.py"
 # default slider value before user starts interacting with it:
-SLIDER_DEFAULT = 50
+SLIDER_DEFAULT = 0
 # string or number you want to have in your database when a user hasn’t interacted with a slider:
 NO_VOTE_VALUE = "Not evaluated"
 # WARNING: a user might not interact with a slider but be satisfied with the default value she has seen on screen. So "Not evaluated" can actually mean two things: either the voter thought the default value was ok for a given candidate, or the voter didn’t even see the candidate (submitted the form before reaching the end, etc). Make sure to take this into account when analyzing the data, or change the "SLIDER_DEFAULT" to a more suitable value than 50.
 VERTICAL_SPACE = 20  # Space between sliders, in pixels
-CANDIDATES_PER_PAGE = 30
+CANDIDATES_PER_PAGE = 80
 # messages for the button "Page suivante !"
 NEXT_BUTTON_MESSAGES = [
     "J’adore faire ça",
@@ -42,12 +42,13 @@ NEXT_BUTTON_MESSAGES = [
 PAGE_TITLE = "Votez pour le nom de la chaîne !"
 PAGE_ICON = "👋"
 HEADER_TITLE = (
-    "<h1 style='text-align: center;'>Trouvez le nouveau nom Homo Fabulus !</h1>"
+    "<h1 style='text-align: center;'>Aidez-moi à choisir le nouveau nom Homo Fabulus !</h1>"
 )
 INSTRUCTIONS = """
-    Donnez une note à chacun des noms, de 0 (« ce nom est nul ») à 100 (« ce nom est génial »).\n
-    Vous n’êtes pas obligé·e de voter pour tous, mais plus vous votez, mieux c’est.\n
-    **Et n’oubliez pas de cliquer sur « Soumettre » à la fin pour que votre vote soit pris en compte !**
+    Donnez une note à chacun des noms et/ou logos, de 1 (« ce nom est nul ») à 100 (« ce nom est génial »).\n
+    Attention, la valeur 0 présente par défaut n’est pas une note valide. Modifiez-la (entre 1 et 100) pour que votre vote soit comptabilisé. \n
+    Vous n’êtes pas obligé·e de voter pour tous les noms, mais plus vous votez, mieux c’est.\n
+    **N’oubliez pas de cliquer sur « Soumettre » à la fin pour que votre vote soit pris en compte !**
     """
 PREVIOUS_PAGE_BUTTON = "Page précédente"
 SUBMIT_BUTTON = "Soumettre mon vote ! J’en peux plus."
