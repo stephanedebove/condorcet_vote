@@ -1,1 +1,3 @@
 secrets.toml
+images/*
+!.gitkeep

@@ -38,20 +38,31 @@ The Condorcet method is a voting system that identifies the candidate who would 
 3. Open the provided local URL in your browser to vote.
 
 
+
 4. To analyze voting results from a CSV file (e.g., exported from Google Sheets), run:
    ```bash
    poetry run python analyze_results.py path/to/results.csv
    ```
-   By default, this will print a randomly selected Condorcet winner based on the computed probabilities.
+   By default, this will print a randomly selected Condorcet winner based on the computed probabilities. If you do not specify `--n-samples` or `--lottery-averaging`, both will default to the number of candidates in the election, ensuring stable and consistent results.
 
    To print the full Condorcet lottery (probability distribution for all candidates), use:
    ```bash
    poetry run python analyze_results.py path/to/results.csv --full-lottery
    ```
 
-   To sample multiple winners, as if you were running n independent random elections, use the `--n-samples` option:
+   To sample multiple winners, as if you were running n independent random elections, use the `--n-samples` option (defaults to the number of candidates if not specified):
    ```bash
    poetry run python analyze_results.py path/to/results.csv --n-samples 3
+   ```
+
+   To control the number of times the Condorcet lottery is averaged for stability, use the `--lottery-averaging` option (defaults to the number of candidates if not specified):
+   ```bash
+   poetry run python analyze_results.py path/to/results.csv --lottery-averaging 10
+   ```
+
+   You can combine these options as needed. For example, to sample 5 winners and average the lottery 20 times:
+   ```bash
+   poetry run python analyze_results.py path/to/results.csv --n-samples 5 --lottery-averaging 20
    ```
 
 
