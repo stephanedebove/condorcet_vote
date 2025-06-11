@@ -39,18 +39,32 @@ The Condorcet method is a voting system that identifies the candidate who would 
 
 
 
+
 4. To analyze voting results from a CSV file (e.g., exported from Google Sheets), run:
    ```bash
    poetry run python analyze_results.py path/to/results.csv
    ```
-   By default, this will print a randomly selected Condorcet winner based on the computed probabilities. If you do not specify `--n-samples` or `--lottery-averaging`, both will default to the number of candidates in the election, ensuring stable and consistent results.
+   By default, this will print a randomly selected Condorcet winner based on the computed probabilities. If you do not specify `--n-samples`, it will default to 1 (one winner). If you do not specify `--lottery-averaging`, it will default to the number of candidates in the election, ensuring stable and consistent results.
+
+   If your CSV contains both text and image columns (image columns are detected by their filename extensions: .jpg, .png, .webp), a warning will be printed. You can analyze only image columns or only text columns using the following options:
+
+   - To analyze only image columns:
+     ```bash
+     poetry run python analyze_results.py path/to/results.csv --images
+     ```
+   - To analyze only text columns:
+     ```bash
+     poetry run python analyze_results.py path/to/results.csv --texts
+     ```
+   - You cannot use both `--images` and `--texts` at the same time.
 
    To print the full Condorcet lottery (probability distribution for all candidates), use:
    ```bash
    poetry run python analyze_results.py path/to/results.csv --full-lottery
    ```
+   When using `--full-lottery`, the script will also sample and print the winner(s) according to the computed probabilities.
 
-   To sample multiple winners, as if you were running n independent random elections, use the `--n-samples` option (defaults to the number of candidates if not specified):
+   To sample multiple winners, as if you were running n independent random elections, use the `--n-samples` option (defaults to 1 if not specified):
    ```bash
    poetry run python analyze_results.py path/to/results.csv --n-samples 3
    ```

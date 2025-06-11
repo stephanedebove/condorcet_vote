@@ -1,3 +1,5 @@
+import re
+
 # Author: Lê Nguyên Hoang
 import sys
 from pathlib import Path
@@ -8,7 +10,45 @@ import pandas as pd
 from scipy.optimize import linprog
 
 
-def get_entities(df: pd.DataFrame, remove_nonevaluated: bool = True) -> List[str]:
+def get_entities(
+    df: pd.DataFrame,
+    remove_nonevaluated: bool = True,
+    only_images: bool = False,
+    only_texts: bool = False,
+) -> List[str]:
+    """
+    Extracts entity/candidate names from DataFrame columns, optionally removing those not evaluated and/or filtering for images or texts.
+    Args:
+        df (pd.DataFrame): DataFrame containing ballots, with columns for each entity.
+        remove_nonevaluated (bool): If True, removes entities with no numeric evaluation.
+        only_images (bool): If True, only returns columns that are image filenames.
+        only_texts (bool): If True, only returns columns that are not image filenames.
+    Returns:
+        List[str]: List of entity/candidate names.
+    Example:
+        >>> get_entities(df)
+        ['A', 'B', 'C']
+    """
+    print("Extracting entities from DataFrame columns.")
+    image_pattern = re.compile(r".+\.(jpg|png|webp)$", re.IGNORECASE)
+
+    def is_image(col: str) -> bool:
+        return bool(image_pattern.match(col))
+
+    def is_text(col: str) -> bool:
+        return not is_image(col)
+
+    columns = df.columns[4:]
+    if only_images:
+        columns = [c for c in columns if is_image(c)]
+    elif only_texts:
+        columns = [c for c in columns if is_text(c)]
+    return [
+        e
+        for e in columns
+        if not remove_nonevaluated
+        or any(pd.notnull(s) and str(s).replace(".", "", 1).isdigit() for s in df[e])
+    ]
     """
     Extracts entity/candidate names from DataFrame columns, optionally removing those not evaluated.
     Args:
@@ -143,8 +183,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n-samples",
         type=int,
-        default=None,
-        help="Number of winners to sample if not printing the full lottery. Default is number of candidates.",
+        default=1,
+        help="Number of winners to sample if not printing the full lottery. Default is 1.",
     )
     parser.add_argument(
         "--lottery-averaging",
@@ -157,13 +197,71 @@ if __name__ == "__main__":
         action="store_true",
         help="Remove entities that have not been evaluated by any voter.",
     )
+    parser.add_argument(
+        "--images",
+        action="store_true",
+        help="Analyze only image columns (filenames ending with .jpg, .png, .webp).",
+    )
+    parser.add_argument(
+        "--texts",
+        action="store_true",
+        help="Analyze only text columns (not image filenames).",
+    )
     args = parser.parse_args()
 
     df = pd.read_csv(args.csv_path)
-    entities = get_entities(df, remove_nonevaluated=args.remove_nonevaluated)
+
+    # Check for image columns
+    image_pattern = re.compile(r".+\.(jpg|png|webp)$", re.IGNORECASE)
+    image_columns = [col for col in df.columns[4:] if image_pattern.match(col)]
+
+    if image_columns:
+        print(
+            "WARNING: Some columns appear to be image filenames (jpg, png, webp). This means votes have been cast on both texts and images. You may want to analyze them separately. Consider using the --images or --texts option to analyze only one type."
+        )
+
+    # Print number of voters and average number of items voted for
+    num_voters = len(df)
+    # entities will be set below, but we need to get the right columns for the current analysis
+    # so we temporarily get entities here for the stats
+    temp_entities = get_entities(
+        df,
+        remove_nonevaluated=args.remove_nonevaluated,
+        only_images=args.images,
+        only_texts=args.texts,
+    )
+    num_entities = len(temp_entities)
+    if num_entities > 0:
+        avg_voted = (
+            df[temp_entities]
+            .apply(
+                lambda row: row.notnull()
+                & row.apply(lambda x: str(x).replace(".", "", 1).isdigit()),
+                axis=1,
+            )
+            .sum(axis=1)
+            .mean()
+        )
+    else:
+        avg_voted = 0
+    print(f"Number of voters: {num_voters}")
+    print(f"Average number of items voted for: {avg_voted:.2f} out of {num_entities}")
+
+    if args.images and args.texts:
+        print(
+            "Both --images and --texts options were provided. Only one can be used at a time."
+        )
+        sys.exit(1)
+
+    entities = get_entities(
+        df,
+        remove_nonevaluated=args.remove_nonevaluated,
+        only_images=args.images,
+        only_texts=args.texts,
+    )
     comparison_matrix = get_comparison_matrix(entities, df)
     n_candidates = len(entities)
-    n_samples = args.n_samples if args.n_samples is not None else n_candidates
+    n_samples = args.n_samples
     lottery_averaging = (
         args.lottery_averaging if args.lottery_averaging is not None else n_candidates
     )
@@ -175,9 +273,28 @@ if __name__ == "__main__":
         print("Condorcet lottery (probability distribution) for each candidate:")
         for entity, prob in zip(entities, condorcet_lottery):
             print(f"  {entity}: {prob:.4f}")
+        winners = sample_lottery(entities, condorcet_lottery, n_samples=n_samples)
+        if n_samples == 1:
+            winner = winners[0]
+            prob = condorcet_lottery[entities.index(winner)]
+            print(
+                f"The randomly selected Condorcet winner is: {winner} (probability: {prob:.4f})"
+            )
+        else:
+            winner_probs = [(w, condorcet_lottery[entities.index(w)]) for w in winners]
+            print("The randomly selected Condorcet winners are:")
+            for w, p in winner_probs:
+                print(f"  {w} (probability: {p:.4f})")
     else:
         winners = sample_lottery(entities, condorcet_lottery, n_samples=n_samples)
         if n_samples == 1:
-            print(f"The randomly selected Condorcet winner is: {winners[0]}")
+            winner = winners[0]
+            prob = condorcet_lottery[entities.index(winner)]
+            print(
+                f"The randomly selected Condorcet winner is: {winner} (probability: {prob:.4f})"
+            )
         else:
-            print(f"The randomly selected Condorcet winners are: {', '.join(winners)}")
+            winner_probs = [(w, condorcet_lottery[entities.index(w)]) for w in winners]
+            print("The randomly selected Condorcet winners are:")
+            for w, p in winner_probs:
+                print(f"  {w} (probability: {p:.4f})")

@@ -1,6 +1,8 @@
+import os
 import random
 import uuid
 from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -41,9 +43,7 @@ NEXT_BUTTON_MESSAGES = [
 # TEXT CONSTANTS
 PAGE_TITLE = "Votez pour le nom de la chaîne !"
 PAGE_ICON = "👋"
-HEADER_TITLE = (
-    "<h1 style='text-align: center;'>Aidez-moi à choisir le nouveau nom Homo Fabulus !</h1>"
-)
+HEADER_TITLE = "<h1 style='text-align: center;'>Aidez-moi à choisir le nouveau nom Homo Fabulus !</h1>"
 INSTRUCTIONS = """
     Donnez une note à chacun des noms et/ou logos, de 1 (« ce nom est nul ») à 100 (« ce nom est génial »).\n
     Attention, la valeur 0 présente par défaut n’est pas une note valide. Modifiez-la (entre 1 et 100) pour que votre vote soit comptabilisé. \n
@@ -59,11 +59,29 @@ CONFIRM_BUTTON = "Je ne change jamais d’avis, enregistre."
 SPINNER_TEXT = "Ok j’enregistre..."
 ALREADY_SUBMITTED_ERROR = "Il semblerait que vous ayez déjà soumis vos données. Un seul vote par personne ! Si vous pensez que c’est une erreur (c’est possible, car je code comme un pied), vous pouvez me contacter: homofabuluslachaine at gmail.com "
 PAGE_COUNT_TEMPLATE = "<h5 style='text-align: center;'>Page {current}/{total}</h3>"
+# Default width for logo images (in pixels)
+DEFAULT_IMAGE_WIDTH = 250
 
 st.set_page_config(
     page_title=PAGE_TITLE,
     page_icon=PAGE_ICON,
 )
+
+# DATA LOADING and INITIALIZATION FUNCTIONS
+
+
+def load_images() -> list[str]:
+    """Load image filenames from the images directory (jpg, png, webp)."""
+    print("Loading images from images directory.")
+    images_dir = Path("images")
+    if not images_dir.exists() or not images_dir.is_dir():
+        return []
+    image_files = [
+        f.name
+        for f in images_dir.iterdir()
+        if f.suffix.lower() in {".jpg", ".png", ".webp"} and f.is_file()
+    ]
+    return image_files
 
 
 # UTILITY FUNCTIONS
@@ -106,8 +124,6 @@ def scroll_to(element_id: str) -> None:
     )
 
 
-
-
 # DATA LOADING and INITIALIZATION FUNCTIONS
 
 
@@ -124,20 +140,23 @@ def initialize_session_state() -> None:
         st.session_state.shuffled_candidates = random.sample(
             candidates_list, len(candidates_list)
         )
+        # Load and shuffle images for this session
+        image_files = load_images()
+        st.session_state.shuffled_images = (
+            random.sample(image_files, len(image_files)) if image_files else []
+        )
         st.session_state["start_time"] = datetime.now()
         st.session_state["session_id"] = str(uuid.uuid4())
         user_ip = st.context.ip_address
         st.session_state["user_ip"] = (
-            user_ip
-            if user_ip
-            else f"localhost_{st.session_state['session_id']}"
+            user_ip if user_ip else f"localhost_{st.session_state['session_id']}"
         )
         st.session_state["page_change"] = False
         st.session_state["current_page"] = 0
 
 
 def initialize_slider(candidate: str) -> None:
-    """Initialize slider value for a candidate."""
+    """Initialize slider value for a candidate or image."""
     slider_key = f"slider_{candidate}"
     candidate_key = f"score_{candidate}"
     if slider_key not in st.session_state:
@@ -193,7 +212,33 @@ def render_candidates(current_page_candidates: list[str]) -> None:
         add_vertical_space()
 
 
-def render_navigation_buttons(candidates: list[str], total_pages: int) -> None:
+def render_images(
+    image_files: list[str], image_width: int = DEFAULT_IMAGE_WIDTH
+) -> None:
+    """Render images and sliders for each image as voting options, with controlled width."""
+    if not image_files:
+        return
+    images_dir = Path("images")
+    for img_file in image_files:
+        img_path = images_dir / img_file
+        img_name = img_path.stem
+        display_name = f"Logo {img_name}"
+        st.image(str(img_path), caption=display_name, width=image_width)
+        initialize_slider(img_file)
+        st.slider(
+            display_name,
+            0,
+            100,
+            key=f"slider_{img_file}",
+            on_change=update_score,
+            args=(f"score_{img_file}", f"slider_{img_file}"),
+        )
+        add_vertical_space()
+
+
+def render_navigation_buttons(
+    candidates: list[str], total_pages: int, image_files: list[str]
+) -> None:
     """Render navigation buttons for pagination and submission."""
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
@@ -212,7 +257,7 @@ def render_navigation_buttons(candidates: list[str], total_pages: int) -> None:
             st.rerun()
     with col3:
         if st.button(SUBMIT_BUTTON):
-            confirm(candidates)
+            confirm(candidates, image_files)
 
 
 def render_page_count(total_pages) -> None:
@@ -238,7 +283,7 @@ def handle_page_change() -> None:
 
 
 @st.dialog(CONFIRM_DIALOG_TITLE)
-def confirm(candidates):
+def confirm(candidates, image_files):
     """
     Display a confirmation dialog before submitting votes.
 
@@ -254,23 +299,24 @@ def confirm(candidates):
     with col2:
         if st.button(CONFIRM_BUTTON):
             with st.spinner(SPINNER_TEXT):
-                save_data(candidates)
+                save_data(candidates, image_files)
 
 
-def save_data(candidates):
+def save_data(candidates, image_files):
     """
     Save user voting data to a Google Sheet, ensuring no duplicate submissions.
     """
     conn = st.connection("gsheets", type=GSheetsConnection)
     df = conn.read(worksheet=WORKSHEET_NAME, ttl=0)
     # Define column names if the DataFrame is empty
+    all_columns = sorted(candidates) + sorted(image_files)
     if df.empty:
         df_columns = [
             "User IP",
             "Session ID",
             "Submission Date and Time",
             "Session Duration (minutes)",
-        ] + sorted(candidates)
+        ] + all_columns
         df = pd.DataFrame(columns=df_columns)
 
     # Prepare data for Google Sheets
@@ -282,13 +328,17 @@ def save_data(candidates):
     session_id = st.session_state["session_id"]
     # check if user_ip or session_id already exists in the dataframe
     if df[(df["User IP"] == user_ip) | (df["Session ID"] == session_id)].empty:
-        # Collect scores for all candidates
+        # Collect scores for all candidates and images
         scores = {
             candidate: st.session_state.get(f"score_{candidate}", NO_VOTE_VALUE)
             for candidate in candidates
         }
-        # Sort candidates alphabetically
-        sorted_scores = dict(sorted(scores.items()))
+        image_scores = {
+            img: st.session_state.get(f"score_{img}", NO_VOTE_VALUE)
+            for img in image_files
+        }
+        # Sort all columns alphabetically
+        all_scores = dict(sorted({**scores, **image_scores}.items()))
 
         # Prepare row data
         row_data = {
@@ -296,7 +346,7 @@ def save_data(candidates):
             "Session ID": session_id,
             "Submission Date and Time": submission_time,
             "Session Duration (minutes)": session_duration,
-            **sorted_scores,
+            **all_scores,
         }
 
         # Append row_data to the DataFrame
@@ -313,6 +363,7 @@ def main() -> None:
     initialize_session_state()
 
     candidates = st.session_state.shuffled_candidates
+    image_files = st.session_state.get("shuffled_images", [])
     total_pages = calculate_total_pages(len(candidates))
 
     handle_page_change()
@@ -322,11 +373,13 @@ def main() -> None:
 
     current_page_candidates = get_current_page_candidates(candidates)
     add_vertical_space()
+    render_candidates(current_page_candidates)
+    # Show images and their sliders after the candidate sliders, but before page count
+    if image_files:
+        render_images(image_files, image_width=250)
     render_page_count(total_pages)
     add_vertical_space()
-    render_candidates(current_page_candidates)
-    render_page_count(total_pages)
-    render_navigation_buttons(candidates, total_pages)
+    render_navigation_buttons(candidates, total_pages, image_files)
 
 
 if __name__ == "__main__":
