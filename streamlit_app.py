@@ -47,8 +47,7 @@ HEADER_TITLE = "<h1 style='text-align: center;'>Aidez-moi à choisir le nouveau 
 INSTRUCTIONS = """
     Donnez une note à chacun des noms et/ou logos, de 1 (« ce nom est nul ») à 100 (« ce nom est génial »).\n
     Attention, la valeur 0 présente par défaut n’est pas une note valide. Modifiez-la (entre 1 et 100) pour que votre vote soit comptabilisé. \n
-    Pour voter, concentrez-vous principalement sur comment les noms « sonnent » et vous paraissent faciles à retenir.\n
-    Vous n’êtes pas obligé·e de voter pour tous les noms, mais plus vous votez, mieux c’est.\n
+    Pour savoir quelle note donner, concentrez-vous principalement sur comment les noms « sonnent » en français et à quel point ils vous paraissent faciles à retenir.\n
     **N’oubliez pas de cliquer sur « Soumettre » à la fin pour que votre vote soit pris en compte !**
     """
 PREVIOUS_PAGE_BUTTON = "Page précédente"
