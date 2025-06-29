@@ -1,4 +1,3 @@
-
 # Condorcet Vote Streamlit App
 
 This project is a Streamlit web application for ranking candidate names using a Condorcet voting system. Users can rate each candidate name from 0 (bad) to 100 (great), and the results are saved to a Google Sheet for further analysis.
@@ -74,6 +73,11 @@ The Condorcet method is a voting system that identifies the candidate who would 
    poetry run python analyze_results.py path/to/results.csv --lottery-averaging 10
    ```
 
+   To calculate the normal average note for each candidate and print the top n candidates, use the `--regular-averages` option (defaults to 10 if not specified):
+   ```bash
+   poetry run python analyze_results.py path/to/results.csv --regular-averages 10
+   ```
+
    You can combine these options as needed. For example, to sample 5 winners and average the lottery 20 times:
    ```bash
    poetry run python analyze_results.py path/to/results.csv --n-samples 5 --lottery-averaging 20
@@ -100,5 +104,5 @@ MIT
 
 ## Author
 Streamlit app by Stéphane Debove
-Analysis code by Lê Nguyên Hoang 
+Analysis code by Lê Nguyên Hoang
 

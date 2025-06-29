@@ -207,6 +207,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Analyze only text columns (not image filenames).",
     )
+    parser.add_argument(
+        "--regular-averages",
+        type=int,
+        default=10,
+        help="Calculate the normal average note for each candidate and print the top n candidates. Default is 10.",
+    )
     args = parser.parse_args()
 
     df = pd.read_csv(args.csv_path)
@@ -298,3 +304,16 @@ if __name__ == "__main__":
             print("The randomly selected Condorcet winners are:")
             for w, p in winner_probs:
                 print(f"  {w} (probability: {p:.4f})")
+
+    if args.regular_averages:
+        averages = {
+            entity: df[entity].apply(pd.to_numeric, errors="coerce").mean()
+            for entity in entities
+            if pd.api.types.is_numeric_dtype(
+                df[entity].apply(pd.to_numeric, errors="coerce")
+            )
+        }
+        sorted_averages = sorted(averages.items(), key=lambda x: x[1], reverse=True)
+        print(f"Top {args.regular_averages} candidates based on average scores:")
+        for entity, avg in sorted_averages[: args.regular_averages]:
+            print(f"  {entity}: {avg:.2f}")
